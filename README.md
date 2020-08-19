@@ -171,5 +171,26 @@ bar();
 x; // 3
 it.next(); // x: 3
 ```
+* 提问和回答机制
 
+```
+function *foo(x) {
+var y = x * (yield "Hello"); //
+return y;
+}
+var it = foo( 6 );
+var res = it.next(); //
+res.value; // "Hello"
+res = it.next( 7 ); 
+res.value; // 42
+```
+```
+it.next() 是在说：生成器 *foo(..) 要给我的下一个值是什么？
 
+yield "Hello" 是在说：生成器 *foo(..) 给你"hello"
+
+it.next( 7 ) 是在说： yield 的值被赋为 7,生成器 *foo(..) 要给我的下一个值是什么？
+```
+> 但是，稍等！与 yield 语句的数量相比，还是多出了一个额外的 next() 。所以，最后一个 it.next(7) 调用再次提出了这样的问题：生成器将要产生的下一个值是什么。但是，再没有 yield 语句来回答这个问题了，是不是？那么谁来回答呢？
+
+> return 语句回答这个问题！如果你的生成器中没有 return 的话——在生成器中和在普通函数中一样， return 当然不是必需的——总有一个假定的 / 隐式的 return; （也就是 return undefined; ），它会在默认情况下回答最后的 it.next(7) 调用提出的问题。
