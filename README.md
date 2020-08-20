@@ -207,7 +207,7 @@ it.next(); // x: 3
 
 > it.next() 意思是“生成器要给我的下一个值是什么？”没有对 yield 进行赋值。
 
-> it.next( 7 ) 的意思是“yield 的值被赋为 7,生成器要给我的下一个值是什么？”
+> it.next( 7 ) 的意思是“当前 yield 的值被赋为 7,生成器要给我的下一个值是什么？”
 ```
 function *foo(x) {
 var y = x * (yield "Hello"); //
@@ -360,3 +360,127 @@ try{
 
 事实上这里的错误捕捉仍然是同步的，只是 yield 的暂停机制保证了在错误被拿到并赋值给 yield 后才继续执行生成器函数 main。
 
+---
+#### 生成器 和 Promise 搭配使用
+
+Promise 和生成器搭配使用最高效，最自然的方法就是 yield 出来一个 Promise，然后通过这个 Promise 来控制生成器的迭代器（具体来说，在以下代码中，promise 的 resolve 是打破 yield 暂停状态的信号） 。
+
+ ```
+function foo(x, y) {
+    return new Promise((resolve, reject) => {
+        setTimeout(()=>resolve('data'), 5000)
+    })
+}
+function* main() {
+    try {
+        var text = yield foo(11, 31);
+        console.log(text);
+    }
+    catch (err) {
+        console.error(err);
+    }
+}
+
+var it = main();
+var p = it.next().value; // 这个 p 会立即得到，因为“返回一个 Promise 对象"是同步执行的（只是 resolve 被放在了一个异步执行的回调函数里面）
+
+// 等待promise p决议
+p.then(
+    // 在 P resolve 之后才 it.next(text)
+    function (text) {
+        console.log('继续执行生成器函数')
+        it.next(text); // yield 被赋值为 p resolve 的结果
+    },
+    function (err) {
+        it.throw(err);
+    }
+);
+```
+#### 为什么说 async,await 是 generator 的语法糖
+考虑以下两点
+> yield 当且仅当 promise 执行 resolve 后，被赋值为 promise resolve 的结果
+
+> var text=yield;console.log(text); 被阻塞，当且仅当 promise 执行 resolve 后才继续执行
+
+所以自然而然地，会发现
+ ```
+function foo(x, y) {
+    return new Promise((resolve, reject) => {
+        setTimeout(()=>resolve('data'), 5000)
+    })
+}
+function* main() {
+    var text = yield foo(11, 31);
+    console.log(text);
+}
+
+var it = main();
+var p = it.next().value; 
+
+p.then(
+    function (text) {
+        it.next(text);
+    }
+);
+```
+等价于
+```
+function foo(x, y) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => resolve('data'), 5000)
+    })
+}
+
+async function main() {
+    var text = await foo(11, 31);
+    console.log(text);
+}
+
+main()
+```
+* 注意
+await 不是简单地等价于 yield，await 还封装了 promise resolve 后生成器才继续执行并对 yielld 赋值的逻辑,也就是下面这部分
+```
+p.then(
+    function (text) {
+        it.next(text);
+    }
+);
+```
+---
+#### 生成器委托
+这里的”委托“用”转移“形容更合适。
+
+```
+function* foo() {
+    console.log("*foo() starting")
+    yield 3;
+    yield 4;
+    console.log("*foo() finished");
+    return 100
+}
+function* bar() {
+    yield 1;
+    yield 2;
+    let res=yield* foo();
+    console.log(res) 
+    yield 5;
+}
+var it = bar();
+it.next().value; // 1
+it.next().value; // 2 
+it.next().value; // *foo() starting 3
+
+it.next().value; // 4
+it.next().value; // *foo() finished 100
+it.next().value; // 5
+
+```
+ yield *foo() 是让迭代器 it 由控制生成器 bar 转为控制生成器 foo
+ 
+ 注意 return 100 执行后，生成器 foo 执行完毕，但是生成器 bar 会立即继续执行;100 会被 bar 生成器交给外界（注意不是作为 yield *foo() 处 yield 的值） 
+ 
+ 
+ 
+ 
+ 
