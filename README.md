@@ -455,7 +455,7 @@ async function main() {
     console.log(text);
 }
 
-main()
+await main()
 ```
 * 注意
 await 不是简单地等价于 yield，await 还封装了 promise resolve 后生成器才继续执行并对 yielld 赋值的逻辑,也就是下面这部分
