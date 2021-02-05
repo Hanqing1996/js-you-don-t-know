@@ -282,30 +282,30 @@ console.log( v );
 // 1 3 5 7 9
 ```
 #### 生成器与异步
-```
+```js
 function foo(x,y) {
     setTimeout(()=>{
-        it.next( 'libai' );
+        let res2=it.next( 'libai' );
+        console.log(res2.value)
     },5000)
-    
     return 2
 }
     
 function *main() {
     var text = yield foo(1,3);
     console.log(text)
-
+    return 10
 }
 var it = main();
 // 这里启动！
 var res=it.next();
 ```
-* 流程解析
+
 1. it.next() 导致 main 函数开始执行 foo(1,3)
 2. 执行 foo(1,3),返回2,setTimeout 的回调函数被放入事件队列;
 3. 执行语句 yield 2,导致 2 被生成器交给迭代器 it;（注意不是 yield 的值被赋为 2！！！）
-4. 执行语句 var res=it.next();console.log(res.value),打印出 2
-5. 同步代码执行完毕，5s后执行回调函数（在这5s内,生成器函数 main 不继续执行，也就是说语句 var text = yield;console.log(text) 被阻塞），执行 it.next( 'libai' ),导致var text = ‘libai’;console.log(text) 被执行。
+4. 同步代码执行完毕，5s后执行回调函数（在这5s内,生成器函数 main 不继续执行，也就是说语句 var text = yield;console.log(text) 被阻塞），执行 it.next( 'libai' ),导致var text = ‘libai’;console.log(text) 被执行。
+5. 由生成器函数最后的return语句回答迭代器的最后一个next提问。res2.value 被赋值为10。
 
 #### 生成器和 Promise 的共同之处
 ```
